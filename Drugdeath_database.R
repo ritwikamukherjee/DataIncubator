@@ -49,11 +49,35 @@ labs
 Y$AgeGroup <- cut(Y$Age, breaks = c(seq(0, 90, by = 10), Inf), labels = labs, right = FALSE)
 Y
 dplyr::count(Y, Race, Sex, AgeGroup)
+
+#Y$Populationratio <- NA
+# for(i in 1:nrow(Y)){
+#   if (is.null(Y[i]) || Y[i] == '') {Y$Populationratio == 0}
+#   else if (Y$Race[i] == "White") {Y$Populationratio[i] == 0.816 } 
+#   else if (Y$Race[i] == "Black"){ Y$Populationratio[i] == 0.091 }
+#   else if (Y$Race[i] == "Hispanic, White"){ Y$Populationratio[i] == 0.002 }
+#   else if (Y$Race[i] == "Hispanic, Black"){ Y$Populationratio[i] == 0.002 }
+#   else if (Y$Race[i] == "Chinese"){ Y$Populationratio[i] == 0.006 }
+#   else if (Y$Race[i] == "Asian, Other"){ Y$Populationratio[i] == 0.01 }
+#   else if (Y$Race[i] == "Asian Indian"){ Y$Populationratio[i] == 0.007 }
+#   else {Y$Populationratio[i] == 0.001}
+# }
+# 
+
 #Make new data frame with the necessary data to compare age, sex, and race of drug accidents
 Ynew=Y %>%
   count(Race, Sex, AgeGroup) %>%
-  mutate(x = as.numeric(reorder(interaction(Race, Sex), 1:n())))
+  mutate(x = as.numeric(reorder(interaction(Race, Sex), 1:n()))) %>%
+  mutate(g = ifelse(Race == "White",0.816,
+            ifelse(Race == "Hispanic, White",0.002,
+            ifelse(Race == "Hispanic, Black",0.002, 
+            ifelse(Race == "Chinese",0.006,     
+              ifelse(Race == "Asian, Other",0.01, 
+                     ifelse(Race == "Asian Indian",0.007,
+              ifelse(Race == "Black", 0.091, NA))))))))  %>%
+  mutate(y= n/g)
 Ynew
+
 
 breaks = sort(c(unique(Ynew$x), seq(min(Ynew$x) + .5, 
                                    max(Ynew$x) + .5, 
@@ -64,7 +88,7 @@ labels = unlist(
   lapply(unique(Ynew$Race), function(i) c("Male", paste0("\n", i), "Female"))
 )
 
-ggplot(Ynew, aes(x = x, y = n, fill = factor(AgeGroup))) +
+drugaccidents<-ggplot(Ynew, aes(x = x, y = y, fill = factor(AgeGroup))) +
   geom_col(show.legend = T) + 
   ggthemes::theme_few() +
   #scale_fill_manual(name = NULL,
@@ -75,3 +99,4 @@ ggplot(Ynew, aes(x = x, y = n, fill = factor(AgeGroup))) +
   scale_x_continuous(breaks = breaks, labels = labels) +
   theme(axis.title.x = element_blank(), axis.ticks.x = element_blank()) +
   labs(title = "Drug Accidents", y = "Count")
+ggsave("DrugAccidents.png", plot = drugaccidents, height = 5 , width= 10,units="in",  dpi=600)
