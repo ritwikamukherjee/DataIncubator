@@ -78,8 +78,8 @@ Ynew=Y %>%
               ifelse(Race == "Asian, Other",0.01, 
                      ifelse(Race == "Asian Indian",0.007,
               ifelse(Race == "Black", 0.091, NA))))))))  %>%
-  mutate(y= n/g) #normalize the count to the demograph. The mutation of g is pooled from data of Baltimore population. 
-              ###https://www.infoplease.com/us/comprehensive-census-data-state/demographic-statistics-40
+ mutate(y= n/(g*sum(n))) #normalize the count to the demograph. The mutation of g is pooled from data of Baltimore population. 
+                     ###https://www.infoplease.com/us/comprehensive-census-data-state/demographic-statistics-40
 Ynew
 
 
@@ -102,7 +102,7 @@ drugaccidents<-ggplot(Ynew, aes(x = x, y = y, fill = factor(AgeGroup))) +
   #) +
   scale_x_continuous(breaks = breaks, labels = labels) +
   theme(axis.title.x = element_blank(), axis.ticks.x = element_blank()) +
-  labs(title = "Drug Accidents", y = "Count")
+  labs(title = "Drug Accidents", y = "Count of accidents normalized to population")
 ggsave("DrugAccidents.png", plot = drugaccidents, height = 5 , width= 10,units="in",  dpi=600)
 
 
@@ -132,7 +132,7 @@ Dselection<-Dselection[, colSums(Dselection != 0) > 0]
 #     ) #use 200 permutations to generate a p-value #not working
 
 
-#Using MCA
+#Using MCA which is similar to PCA but on quantitative data. 
 #install.packages(c("FactoMineR", "factoextra"))
 library("FactoMineR")
 library("factoextra")
@@ -182,3 +182,31 @@ biplot2<-fviz_mca_var(res2.mca, col.var = "contrib",
 #Oxycodone and Oxymorphone are the biggest contributors. However, there is no directionality towards age, race, or sex yet.
 ggsave("Biplot2.png", plot = biplot2, height = 10 , width= 10,units="in",  dpi=600)
 
+
+#######Try plotting with an interaction of Sex and Race
+D<-dplyr::select(datnew, Heroin, Cocaine, Fentanyl, FentanylAnalogue, Oxycodone, Oxymorphone, Ethanol, Hydrocodone,
+                 Benzodiazepine, Methadone,Amphet, Tramad, Morphine_NotHeroin, Hydromorphone, Other,OpiateNOS, AnyOpioid)
+D<-data.frame(cbind("Race"=Y$Race,"Sex"=Y$Sex,"Agegroups"= Y$AgeGroup, D))
+str(D)
+D<-D%>%mutate(x = as.numeric(reorder(interaction(Race, Sex), 1:n()))) 
+str(D)
+D<-dplyr::select(D,-Race, -Sex, -Agegroups,-Other, -FentanylAnalogue,-Morphine_NotHeroin )
+D$x<-factor(D$x)
+res3.mca <- MCA(D, graph = FALSE)
+fviz_mca_biplot(res3.mca)
+fviz_contrib(res3.mca, choice = "var", axes = 1:2, top = 5) #Oxycodon and Oxymorphone are the biggest contributors
+
+# data frame with variable coordinates
+cats = apply(D, 2, function(x) nlevels(as.factor(x)))
+cats
+mca1_vars_df = data.frame(res3.mca$var$coord, Variable = rep(names(cats), cats))
+# data frame with observation coordinates
+mca1_obs_df = data.frame(res3.mca$ind$coord)
+
+# plot of variable categories
+ggplot(data=mca1_vars_df, 
+       aes(x = Dim.1, y = Dim.2, label = rownames(mca1_vars_df))) +
+  geom_hline(yintercept = 0, colour = "gray70") +
+  geom_vline(xintercept = 0, colour = "gray70") +
+  geom_text(aes(colour=Variable)) +
+  ggtitle("MCA plot of variables using R package FactoMineR")
