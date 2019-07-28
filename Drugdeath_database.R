@@ -8,6 +8,9 @@ library(dplyr)
 library(reshape2)
 library(ggplot2)
 library(ggthemes)
+library(lme4) # for running mixed models
+library(car) # for statistical hypothesis tests
+library(bbmle)
 
 table(dat$Age)
 table(dat$Sex)
@@ -75,7 +78,8 @@ Ynew=Y %>%
               ifelse(Race == "Asian, Other",0.01, 
                      ifelse(Race == "Asian Indian",0.007,
               ifelse(Race == "Black", 0.091, NA))))))))  %>%
-  mutate(y= n/g)
+  mutate(y= n/g) #normalize the count to the demograph. The mutation of g is pooled from data of Baltimore population. 
+              ###https://www.infoplease.com/us/comprehensive-census-data-state/demographic-statistics-40
 Ynew
 
 
@@ -100,3 +104,81 @@ drugaccidents<-ggplot(Ynew, aes(x = x, y = y, fill = factor(AgeGroup))) +
   theme(axis.title.x = element_blank(), axis.ticks.x = element_blank()) +
   labs(title = "Drug Accidents", y = "Count")
 ggsave("DrugAccidents.png", plot = drugaccidents, height = 5 , width= 10,units="in",  dpi=600)
+
+
+#### Discussing the relationship of the drugs with the age group, race, and sex of the population
+D<-dplyr::select(datnew, Heroin, Cocaine, Fentanyl, FentanylAnalogue, Oxycodone, Oxymorphone, Ethanol, Hydrocodone,
+                 Benzodiazepine, Methadone,Amphet, Tramad, Morphine_NotHeroin, Hydromorphone, Other,OpiateNOS, AnyOpioid)
+head(D)
+
+D=data.frame(ifelse(D == "Y",1,0))
+D<-data.frame(cbind("Race"=Y$Race,"Sex"=Y$Sex,"Agegroups"= Y$AgeGroup, D))
+str(D)
+D<-D%>%mutate(x = as.numeric(reorder(interaction(Race, Sex,Agegroups), 1:n()))) 
+
+library(ropls)
+Dselection<-dplyr::select(D, -Race, -Sex, -Agegroups, -x) #X data
+Dselection<-Dselection[, colSums(Dselection != 0) > 0]
+
+#PLSDA doesn't work on binary data. Using Multiple correspondence analysis (MCA) instead.
+# drug.plsda <-
+#   opls(
+#     Dselection, #X data
+#     D$Sex, #Y data
+#     plotL = FALSE, #suppresses default plotting
+#     predI = 1, #make one predictive axis
+#     orthoI = 1, #and one orthogonal axis
+#     #permI = 200
+#     ) #use 200 permutations to generate a p-value #not working
+
+
+#Using MCA
+#install.packages(c("FactoMineR", "factoextra"))
+library("FactoMineR")
+library("factoextra")
+D<-dplyr::select(datnew, Heroin, Cocaine, Fentanyl, FentanylAnalogue, Oxycodone, Oxymorphone, Ethanol, Hydrocodone,
+                 Benzodiazepine, Methadone,Amphet, Tramad, Morphine_NotHeroin, Hydromorphone, Other,OpiateNOS, AnyOpioid)
+
+res.mca <- MCA(D, graph = FALSE)
+print(res.mca)
+fviz_mca_biplot(res.mca)
+fviz_mca_biplot(res.mca, 
+                #repel = TRUE, 
+                ggtheme = theme_minimal()) ###Fentanyl and Other are different from other drugs. Least correlated. But also the correlations are not strong.
+
+#Only 1.3% described in dimension
+# Contributions of rows to dimension 1
+fviz_contrib(res.mca, choice = "var", axes = 1, top = 15) 
+#### Oxycodon, Oxymorphone, Heroin,Benzodiazepine, Morphine,Opiate, Cocaine, Oxycodon are the biggest contributors to the first dimension of correspondence
+# Contributions of rows to dimension 2
+fviz_contrib(res.mca, choice = "var", axes = 2, top = 15)
+# Total contribution to dimension 1 and 2
+fviz_contrib(res.mca, choice = "var", axes = 1:2, top = 15)
+biplot1<-fviz_mca_var(res.mca, col.var = "contrib",
+   gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+   repel = TRUE, # avoid text overlapping 
+   ggtheme = theme_minimal())
+ggsave("Biplot1.png", plot = biplot1, height = 10 , width= 10,units="in",  dpi=600) #ugly biplot. Hard to see.
+
+
+
+D<-dplyr::select(D, -FentanylAnalogue, -Morphine_NotHeroin)
+res2.mca <- MCA(D, graph = FALSE)
+fviz_mca_biplot(res2.mca, 
+                #repel = TRUE, 
+                ggtheme = theme_minimal()) ###Correlation increased. 
+# Contributions of rows to dimension 1
+fviz_contrib(res2.mca, choice = "var", axes = 1, top = 8) #selecting the top 8 contributors
+#### Oxycodon, Oxymorphone, Heroin,Benzodiazepine, Cocaine, Oxycodon are the biggest contributors to the first dimension of correspondence
+# Contributions of rows to dimension 2
+fviz_contrib(res2.mca, choice = "var", axes = 2, top = 15)
+# Total contribution to dimension 1 and 2
+fviz_contrib(res2.mca, choice = "var", axes = 1:2, top = 15)
+biplot2<-fviz_mca_var(res2.mca, col.var = "contrib",
+            gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"), 
+            repel = TRUE, # avoid text overlapping 
+            ggtheme = theme_minimal())
+
+#Oxycodone and Oxymorphone are the biggest contributors. However, there is no directionality towards age, race, or sex yet.
+ggsave("Biplot2.png", plot = biplot2, height = 10 , width= 10,units="in",  dpi=600)
+
