@@ -1,6 +1,6 @@
 #Accidental Drug Related Deaths 2012-2018
 rm(list = ls())
-setwd("C:/Users/Ritwika Mukherjee/Downloads")
+setwd("C:/Users/Ritwika Mukherjee/Desktop/DataIncubator")
 dat = read.csv("Accidental_Drug_Related_Deaths_2012-2018.csv")
 str(dat)
 library(tidyverse)
@@ -210,3 +210,224 @@ ggplot(data=mca1_vars_df,
   geom_vline(xintercept = 0, colour = "gray70") +
   geom_text(aes(colour=Variable)) +
   ggtitle("MCA plot of variables using R package FactoMineR")
+
+
+#####Location of death affected by sex and race groups
+L<-dplyr::select(datnew, Race, Sex, Location)
+L$Place <- NA
+L$Place <- Loc$Location
+for(i in 1:nrow(L)){
+  if(L$Place[i] == "" | L$Place[i] == "Other") { L$Place[i] <- "Other" } else if
+  (L$Place[i] == "Nursing Home" | L$Place[i] == "Convalescent Home"| L$Place[i] == "Hospice" ) { L$Place[i] <- "Nursing Home" }
+}
+head(L)
+Loc=dplyr::count(L,Place,Sex,Race)
+
+L1 <- Loc %>%
+   mutate(x = as.numeric(reorder(interaction(Race, Sex), 1:n())))%>%
+   mutate(g = ifelse(Race == "White",0.816,
+                  ifelse(Race == "Hispanic, White",0.002,
+                         ifelse(Race == "Hispanic, Black",0.002, 
+                                ifelse(Race == "Chinese",0.006,     
+                                       ifelse(Race == "Asian, Other",0.01, 
+                                              ifelse(Race == "Asian Indian",0.007,
+                                                     ifelse(Race == "Black", 0.091, NA))))))))  %>%
+  mutate(y= n/(g*sum(n))) #normalize the count to the demograph. The mutation of g is pooled from data of Baltimore population. 
+###https://www.infoplease.com/us/comprehensive-census-data-state/demographic-statistics-40
+L1
+
+breaks = sort(c(unique(L1$x), seq(min(L1$x) + .5, 
+                                    max(L1$x) + .5, 
+                                    length(unique(L1$Sex))
+)))
+
+labels = unlist(
+  lapply(unique(L1$Race), function(i) c("Male", paste0("\n", i), "Female"))
+)
+
+drugaccidentsLoc<-ggplot(L1, aes(x = x, y = y, fill = factor(Place))) +
+  geom_col(show.legend = T) + 
+  ggthemes::theme_few() +
+  #scale_fill_manual(name = NULL,
+  #                 values = c("gray75", "gray25"),
+  #                breaks= c("0", "1"),
+  #               labels = c("false", "true")
+  #) +
+  scale_x_continuous(breaks = breaks, labels = labels) +
+  theme(axis.title.x = element_blank(), axis.ticks.x = element_blank()) +
+  labs(title = "Drug Deaths based on Location", y = "Count of accidents normalized to population")
+
+drugaccidentsLoc
+ggsave("Drugdeathlocation.png", plot = drugaccidentsLoc, height = 10 , width= 10,units="in",  dpi=600)
+
+Locrace=dplyr::count(L,Place,Race)
+Lrace <- Locrace %>%
+  mutate(g = ifelse(Race == "White",0.816,
+                    ifelse(Race == "Hispanic, White",0.002,
+                           ifelse(Race == "Hispanic, Black",0.002, 
+                                  ifelse(Race == "Chinese",0.006,     
+                                         ifelse(Race == "Asian, Other",0.01, 
+                                                ifelse(Race == "Asian Indian",0.007,
+                                                       ifelse(Race == "Black", 0.091, NA))))))))  %>%
+  mutate(y= n/(g*sum(n))) #normalize the count to the demograph. The mutation of g is pooled from data of Baltimore population. 
+###https://www.infoplease.com/us/comprehensive-census-data-state/demographic-statistics-40
+Lrace
+
+drugaccidentsLocrace<-ggplot(Lrace, aes(x = Race, y = y, fill = factor(Place))) +
+  geom_col(show.legend = T) + 
+  ggthemes::theme_few() +
+  #scale_fill_manual(name = NULL,
+  #                 values = c("gray75", "gray25"),
+  #                breaks= c("0", "1"),
+  #               labels = c("false", "true")
+  #) +
+  theme(axis.title.x = element_blank(), axis.ticks.x = element_blank()) +
+  labs(title = "Drug Deaths based on Location", y = "Count of accidents normalized to population")
+
+drugaccidentsLocrace
+ggsave("Drugdeathlocation2.png", plot = drugaccidentsLocrace, height = 10 , width= 10,units="in",  dpi=600)
+
+Deaths=xtabs(formula=n~Place, data=Lrace)  #68.36% All population died in residence 
+                                              ##or random alleyways instead of at cared for places
+#DeathsPlace
+#Convalescent Home           Hospice          Hospital      Nursing Home 
+#0                 0                 0              1586                 5 
+#Other         Residence 
+#786              2652 
+Deaths=xtabs(formula=n~Place+Race, data=Lrace)   #55.81% Black; 61.8% Hispanic White; 70.70% White are found dead in non hospital locations
+
+
+####Taking only 2018 data and counting deaths. Last two years
+Z<-datnew
+class(datnew$Date)
+Z$Date2 <- as.Date( as.character(datnew$Date), "%m/%d/%Y")
+Zrecent <- subset(Z, Z$Date2 > as.Date("2018-01-01"),)
+str(Zrecent)
+
+Znew=Zrecent %>%
+  dplyr::count(Race, Sex) %>%
+  mutate(x = as.numeric(reorder(interaction(Race, Sex), 1:n()))) %>%
+  mutate(g = ifelse(Race == "White",0.816,
+                    ifelse(Race == "Hispanic, White",0.002,
+                           ifelse(Race == "Hispanic, Black",0.002, 
+                                  ifelse(Race == "Chinese",0.006,     
+                                         ifelse(Race == "Asian, Other",0.01, 
+                                                ifelse(Race == "Asian Indian",0.007,
+                                                       ifelse(Race == "Black", 0.091, NA))))))))  %>%
+  mutate(y= n/(g*sum(n))) #normalize the count to the demograph. The mutation of g is pooled from data of Baltimore population. 
+###https://www.infoplease.com/us/comprehensive-census-data-state/demographic-statistics-40
+Znew
+breaks = sort(c(unique(Znew$x), seq(min(Znew$x) + .5, 
+                                  max(Znew$x) + .5, 
+                                  length(unique(Znew$Sex))
+)))
+labels = unlist(
+  lapply(unique(Znew$Race), function(i) c("Male", paste0("\n", i), "Female"))
+)
+Drugdeaths2017_2018<-ggplot(Znew, aes(x =x , y = y)) +
+  geom_col(show.legend = T) + 
+  ggthemes::theme_few() +
+  #scale_fill_manual(name = NULL,
+  #                 values = c("gray75", "gray25"),
+  #                breaks= c("0", "1"),
+  #               labels = c("false", "true")
+  #) +
+  scale_x_continuous(breaks = breaks, labels = labels) +
+  theme(axis.title.x = element_blank(), axis.ticks.x = element_blank()) +
+  labs(title = "Drug Accidents", y = "Count of accidents normalized to population")
+### 1001 deaths in 2018 out of 3,572,665. That is 28 deaths in 100,000 involving 
+### drugs in Connecticut, which is twofold higher than the national rate of 
+###14.6 deaths per 100,000 persons.
+ggsave("Drugdeaths2018.png", plot = Drugdeaths2017_2018, height = 10 , width= 10,units="in",  dpi=600)
+
+Z2017 <- subset(Z, Z$Date2 < as.Date("2018-01-01") & Z$Date2 > as.Date("2017-01-01") ,)
+Z2016 <- subset(Z, Z$Date2 < as.Date("2017-01-01") & Z$Date2 > as.Date("2016-01-01") ,)
+Z2015 <- subset(Z, Z$Date2 < as.Date("2016-01-01") & Z$Date2 > as.Date("2015-01-01") ,)
+Z2014 <- subset(Z, Z$Date2 < as.Date("2015-01-01") & Z$Date2 > as.Date("2014-01-01") ,)
+Z2013 <- subset(Z, Z$Date2 < as.Date("2014-01-01") & Z$Date2 > as.Date("2013-01-01") ,)
+Z2012 <- subset(Z, Z$Date2 < as.Date("2013-01-01") & Z$Date2 > as.Date("2012-01-01") ,)
+years<-c(as.integer(count(Z2012)),as.integer(count(Z2013)),as.integer(count(Z2014)),as.integer(count(Z2015)),as.integer(count(Z2016)),as.integer(count(Z2017)),as.integer(count(Zrecent)))
+xyears<-2012:2018
+total<-data.frame(years,xyears)
+Yeardeaths<-ggplot(total,aes(x = yyears , y = years, fill=yyears))+
+  geom_bar(stat="identity") + 
+  #ggthemes::theme_few() +
+  #scale_fill_manual(name = NULL,
+  #                 values = c("gray75", "gray25"),
+  #                breaks= c("0", "1"),
+  #               labels = c("false", "true")
+  #) +
+  #theme(axis.title.x = element_blank(), axis.ticks.x = element_blank()) +
+  labs(title = "Drug Deaths based on Year", y = "Count of drug accidents")
+
+  
+Yeardeaths
+ggsave("Yeardeaths.png", plot = Yeardeaths, height = 10 , width= 10,units="in",  dpi=600)
+#In 2017, Connecticut providers wrote 48.0 opioid prescriptions for every 100 persons (Figure 2) compared to the average U.S. rate of 58.7 opioid prescriptions. 
+#Prescription rates are decreasing.Yet overdosage is increasing
+#####Looking at strong opioids for data in the year 2018
+Zopioid<-dplyr::select(Zrecent, Race, Sex,Heroin, Cocaine, Fentanyl, FentanylAnalogue, Oxycodone, Oxymorphone, Ethanol, Hydrocodone,
+                 Benzodiazepine, Methadone,Amphet, Tramad, Morphine_NotHeroin, Hydromorphone)
+
+Zopioid<-Zopioid%>%
+  mutate(x = as.numeric(reorder(interaction(Race, Sex), 1:n())))  %>%
+  mutate(Morphine = ifelse(Morphine_NotHeroin == "Y", 'Y',
+                 ifelse(Morphine_NotHeroin == "YES", 'Y','')))%>%
+  mutate(Fentanyl = ifelse(Fentanyl == "Y", 'Y',
+                           ifelse(Fentanyl == "YES", 'Y','')))
+Zopioid$Morphine<-as.factor(Zopioid$Morphine)
+Zopioid$Fentanyl<-as.factor(Zopioid$Fentanyl)
+str(Zopioid)
+Zopioid<-dplyr::select(Zopioid, -Morphine_NotHeroin)
+str(Zopioid)
+Zopioid.active<- dplyr::select(Zopioid, -Race,-Sex,-x) 
+str(Zopioid.active)
+summary(Zopioid.active)
+for (i in 1:14) {
+  plot(Zopioid.active[,i], main=colnames(Zopioid.active)[i],
+       ylab = "Count", col="steelblue", las = 2)
+}
+### summary(Zopioid.active)
+#Heroin  Cocaine Fentanyl FentanylAnalogue Oxycodone Oxymorphone Ethanol Hydrocodone Benzodiazepine
+#:618    :664    :253     :755             :940      :989        :751    :987        :738         
+#Y:383   Y:337   Y:748    Y:246            Y: 61     Y: 12       Y:250   Y: 14       Y:263         
+#Methadone Amphet  Tramad  Hydromorphone Morphine
+#:916      :945    :964    :994          :999   
+#Y: 85     Y: 56   Y: 37   Y:  7         Y:  2 
+
+
+#Morphine, Tramad, Amphet, Hydrocodone, Oxymorphone,and Hydromorphone are very low in frequency and are removed from analysis
+Zopioid<-dplyr::select(Zrecent, Race, Sex,Heroin, Cocaine, Fentanyl, FentanylAnalogue, Oxycodone, Ethanol,
+                       Benzodiazepine, Methadone)
+
+Zopioid<-Zopioid%>%
+  mutate(x = as.numeric(reorder(interaction(Race, Sex), 1:n())))  %>%
+  mutate(Fentanyl = ifelse(Fentanyl == "Y", 'Y',
+                           ifelse(Fentanyl == "YES", 'Y','')))
+Zopioid$Fentanyl<-as.factor(Zopioid$Fentanyl)
+Zopioid.active<- dplyr::select(Zopioid, -Race,-Sex,-x) 
+Zopioid.inactive<-dplyr::select(Zopioid,Sex)
+str(Zopioid.active)
+summary(Zopioid.active)
+Opioid.mca <- MCA(Zopioid.active, graph = FALSE)
+print(Opioid.mca)
+fviz_mca_biplot(Opioid.mca)#Rows (individuals) are represented by blue points and columns (variable categories) by red triangles.
+fviz_screeplot(Opioid.mca, addlabels = TRUE, ylim = c(0, 45))#19.4% data explained by first dimension and 14.5% from the second
+fviz_contrib(Opioid.mca, choice = "var", axes = 1:2, top = 8)#Methadone, Fentanyl and analogue, and Benzodiazepine explain most of the differences
+fviz_mca_var(Opioid.mca, choice = "mca.cor", 
+             repel = TRUE, # Avoid text overlapping (slow)
+             ggtheme = theme_minimal())
+    #####Methadone, Heroin,Benzodiazepine most correlated with second dimension
+    #####Cocaine, Oxycodone,Fentanyl and it analogue most correlated with first dimension
+Opioid.desc <- dimdesc(Opioid.mca, axes = c(1,2))
+Opioid.desc[[1]]
+fviz_mca_ind(Opioid.mca, 
+             label = "none", # hide individual labels
+             habillage = Zrecent$x, # color by groups 
+             palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             ggtheme = theme_minimal()) 
+fviz_mca_ind(res.mca, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE, # Avoid text overlapping (slow if many points)
+             ggtheme = theme_minimal())
