@@ -406,6 +406,10 @@ Zopioid<-Zopioid%>%
                            ifelse(Fentanyl == "YES", 'Y','')))
 Zopioid$Fentanyl<-as.factor(Zopioid$Fentanyl)
 Zopioid.active<- dplyr::select(Zopioid, -Race,-Sex,-x) 
+for (i in 1:ncol(Zopioid.active)) {
+  plot(Zopioid.active[,i], main=colnames(Zopioid.active)[i],
+       ylab = "Count", col="steelblue", las = 2)
+}
 Zopioid.inactive<-dplyr::select(Zopioid,Sex)
 str(Zopioid.active)
 summary(Zopioid.active)
@@ -421,13 +425,45 @@ fviz_mca_var(Opioid.mca, choice = "mca.cor",
     #####Cocaine, Oxycodone,Fentanyl and it analogue most correlated with first dimension
 Opioid.desc <- dimdesc(Opioid.mca, axes = c(1,2))
 Opioid.desc[[1]]
-fviz_mca_ind(Opioid.mca, 
-             label = "none", # hide individual labels
-             habillage = Zrecent$x, # color by groups 
-             palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             ggtheme = theme_minimal()) 
-fviz_mca_ind(res.mca, col.ind = "cos2", 
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = TRUE, # Avoid text overlapping (slow if many points)
+#fviz_mca_ind(Opioid.mca, 
+#             label = "none", # hide individual labels
+#             habillage = Zrecent$Heroin, # color by groups 
+#             palette = c("#00AFBB", "#E7B800"),
+#             addEllipses = TRUE, ellipse.type = "confidence",
+#             ggtheme = theme_minimal()) 
+
+#fviz_mca_ind(Opioid.mca, col.ind = "cos2", 
+#             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#             ggtheme = theme_minimal())
+var <- get_mca_var(Opioid.mca)
+library("corrplot")
+corrplot(var$contrib, is.corr = FALSE)
+ggsave("Correlation.png", plot = last_plot(), height = 10 , width= 10,units="in",  dpi=600)
+
+SexMCA<-fviz_mca_ind(Opioid.mca, label = "none", habillage=Zrecent$Sex)
+RaceMCA<-fviz_mca_ind(Opioid.mca, label = "none", habillage=Zrecent$Race)
+ggsave("SexMCA2018.png", plot = SexMCA, height = 10 , width= 10,units="in",  dpi=600)
+ggsave("RaceMCA2018.png", plot = RaceMCA, height = 10 , width= 10,units="in",  dpi=600)
+
+ZopioidALL<-dplyr::select(Z, Race, Sex,Heroin, Cocaine, Fentanyl, FentanylAnalogue, Oxycodone, Ethanol,
+                       Benzodiazepine, Methadone)
+
+ZopioidALL<-ZopioidALL%>%
+  mutate(x = as.numeric(reorder(interaction(Race, Sex), 1:n())))  %>%
+  mutate(Fentanyl = ifelse(Fentanyl == "Y", 'Y',
+                           ifelse(Fentanyl == "YES", 'Y','')))
+ZopioidALL$Fentanyl<-as.factor(ZopioidALL$Fentanyl)
+ZopioidALL.active<- dplyr::select(ZopioidALL, -Race,-Sex,-x) 
+OpioidALLYEARS.mca <- MCA(ZopioidALL.active, graph = FALSE)
+fviz_mca_biplot(OpioidALLYEARS.mca)#Rows (individuals) are represented by blue points and columns (variable categories) by red triangles.
+fviz_screeplot(OpioidALLYEARS.mca, addlabels = TRUE, ylim = c(0, 45))#19.4% data explained by first dimension and 14.5% from the second
+fviz_contrib(OpioidALLYEARS.mca, choice = "var", axes = 1:2, top = 8)#Methadone, Fentanyl and analogue, and Benzodiazepine explain most of the differences
+fviz_mca_var(OpioidALLYEARS.mca, choice = "mca.cor", 
+             repel = TRUE, # Avoid text overlapping (slow)
              ggtheme = theme_minimal())
+var <- get_mca_var(OpioidALLYEARS.mca)
+corrplot(var$contrib, is.corr = FALSE)
+SexMCAall<-fviz_mca_ind(OpioidALLYEARS.mca, label = "none", habillage=Z$Sex,addEllipses = TRUE, ellipse.level = 0.95)
+RaceMCAall<-fviz_mca_ind(OpioidALLYEARS.mca, label = "none", habillage=Z$Race,addEllipses = TRUE, ellipse.level = 0.95)
+ggsave("SexMCA_Allyrs.png", plot = SexMCAall, height = 10 , width= 10,units="in",  dpi=600)
+ggsave("RaceMCA_Allyears.png", plot = RaceMCAall, height = 10 , width= 10,units="in",  dpi=600)
