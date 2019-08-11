@@ -346,22 +346,23 @@ Z2015 <- subset(Z, Z$Date2 < as.Date("2016-01-01") & Z$Date2 > as.Date("2015-01-
 Z2014 <- subset(Z, Z$Date2 < as.Date("2015-01-01") & Z$Date2 > as.Date("2014-01-01") ,)
 Z2013 <- subset(Z, Z$Date2 < as.Date("2014-01-01") & Z$Date2 > as.Date("2013-01-01") ,)
 Z2012 <- subset(Z, Z$Date2 < as.Date("2013-01-01") & Z$Date2 > as.Date("2012-01-01") ,)
-years<-c(as.integer(count(Z2012)),as.integer(count(Z2013)),as.integer(count(Z2014)),as.integer(count(Z2015)),as.integer(count(Z2016)),as.integer(count(Z2017)),as.integer(count(Zrecent)))
-xyears<-2012:2018
-total<-data.frame(years,xyears)
-Yeardeaths<-ggplot(total,aes(x = yyears , y = years, fill=yyears))+
-  geom_bar(stat="identity") + 
-  #ggthemes::theme_few() +
-  #scale_fill_manual(name = NULL,
-  #                 values = c("gray75", "gray25"),
-  #                breaks= c("0", "1"),
-  #               labels = c("false", "true")
-  #) +
-  #theme(axis.title.x = element_blank(), axis.ticks.x = element_blank()) +
+countyears<-c(as.integer(count(Z2012)),as.integer(count(Z2013)),as.integer(count(Z2014)),as.integer(count(Z2015)),as.integer(count(Z2016)),as.integer(count(Z2017)))
+years<-2012:2017
+heroindeaths<-c(150,220,300,380,450,425)
+syntheticdeaths<-c(20,55,76,200,79,686) #data from CDC WONDER
+total<-data.frame(years,countyears,heroindeaths,syntheticdeaths)
+Yeardeaths<-ggplot(total,aes(x = years , y = countyears, fill=years))+
+  geom_bar(stat="identity") +
   labs(title = "Drug Deaths based on Year", y = "Count of drug accidents")
+Yeardeaths<-Yeardeaths + 
+  geom_point(data=total, aes(x=years, y=heroindeaths,color="yellow"))+
+  geom_line(data=total, aes(x=years, y=heroindeaths,color="yellow"))+
+  geom_point(data=total, aes(x=years, y=syntheticdeaths,color="green"))+
+  geom_line(data=total, aes(x=years, y=syntheticdeaths,color="green"))
 
-  
-Yeardeaths
+Yeardeaths<-Yeardeaths +scale_color_manual("Opioid deaths", values=c(yellow="yellow", green="green"),
+                               labels=c("Heroin","Synthetic Opioid"))
+
 ggsave("Yeardeaths.png", plot = Yeardeaths, height = 10 , width= 10,units="in",  dpi=600)
 #In 2017, Connecticut providers wrote 48.0 opioid prescriptions for every 100 persons (Figure 2) compared to the average U.S. rate of 58.7 opioid prescriptions. 
 #Prescription rates are decreasing.Yet overdosage is increasing
