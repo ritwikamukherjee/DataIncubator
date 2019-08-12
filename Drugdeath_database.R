@@ -428,10 +428,11 @@ Opioid.desc <- dimdesc(Opioid.mca, axes = c(1,2))
 Opioid.desc[[1]]
 fviz_mca_ind(Opioid.mca, 
              label = "none", # hide individual labels
-             habillage = "Zopioid.active$Fentanyl", # color by groups 
+             habillage = "Methadone", # color by groups 
              palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              ggtheme = theme_minimal()) 
+ggsave("IndividualMCA2018_Methadone.png", plot = last_plot(), height = 10 , width= 10,units="in",  dpi=600)
 # fviz_mca_ind(Opioid.mca, col.ind = "cos2", 
 #              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
 #              ggtheme = theme_minimal())
