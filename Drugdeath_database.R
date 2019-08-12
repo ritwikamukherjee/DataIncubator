@@ -355,13 +355,13 @@ Yeardeaths<-ggplot(total,aes(x = years , y = countyears, fill=years))+
   geom_bar(stat="identity") +
   labs(title = "Drug Deaths based on Year", y = "Count of drug accidents")
 Yeardeaths<-Yeardeaths + 
-  geom_point(data=total, aes(x=years, y=heroindeaths,color="yellow"))+
-  geom_line(data=total, aes(x=years, y=heroindeaths,color="yellow"))+
   geom_point(data=total, aes(x=years, y=syntheticdeaths,color="green"))+
-  geom_line(data=total, aes(x=years, y=syntheticdeaths,color="green"))
+  geom_line(data=total, aes(x=years, y=syntheticdeaths,color="green"))+
+  geom_point(data=total, aes(x=years, y=heroindeaths,color="yellow"))+
+  geom_line(data=total, aes(x=years, y=heroindeaths,color="yellow"))
 
-Yeardeaths<-Yeardeaths +scale_color_manual("Opioid deaths", values=c(yellow="yellow", green="green"),
-                               labels=c("Heroin","Synthetic Opioid"))
+Yeardeaths<-Yeardeaths +scale_color_manual("Opioid deaths", values=c(green="green",yellow="yellow"),
+                               labels=c("Synthetic Opioid","Heroin"))
 
 ggsave("Yeardeaths.png", plot = Yeardeaths, height = 10 , width= 10,units="in",  dpi=600)
 #In 2017, Connecticut providers wrote 48.0 opioid prescriptions for every 100 persons (Figure 2) compared to the average U.S. rate of 58.7 opioid prescriptions. 
@@ -426,16 +426,15 @@ fviz_mca_var(Opioid.mca, choice = "mca.cor",
     #####Cocaine, Oxycodone,Fentanyl and it analogue most correlated with first dimension
 Opioid.desc <- dimdesc(Opioid.mca, axes = c(1,2))
 Opioid.desc[[1]]
-#fviz_mca_ind(Opioid.mca, 
-#             label = "none", # hide individual labels
-#             habillage = Zrecent$Heroin, # color by groups 
-#             palette = c("#00AFBB", "#E7B800"),
-#             addEllipses = TRUE, ellipse.type = "confidence",
-#             ggtheme = theme_minimal()) 
-
-#fviz_mca_ind(Opioid.mca, col.ind = "cos2", 
-#             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#             ggtheme = theme_minimal())
+fviz_mca_ind(Opioid.mca, 
+             label = "none", # hide individual labels
+             habillage = "Zopioid.active$Fentanyl", # color by groups 
+             palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             ggtheme = theme_minimal()) 
+# fviz_mca_ind(Opioid.mca, col.ind = "cos2", 
+#              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#              ggtheme = theme_minimal())
 var <- get_mca_var(Opioid.mca)
 library("corrplot")
 corrplot(var$contrib, is.corr = FALSE)
